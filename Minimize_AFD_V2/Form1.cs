@@ -35,6 +35,8 @@ namespace Minimize_AFD_V2
                     size = text.Length;
 
                     textBox1.Text = file; //Place file path in textbox
+                    button2.Visible = true;
+                    
                 }
                 catch (IOException)
                 {
@@ -57,11 +59,16 @@ namespace Minimize_AFD_V2
 
         private void button2_Click(object sender, EventArgs e)
         {
+            if (textBox1.Text.Length > 0) {
+               
+
+            }
             State_list S_List = new State_list(textBox1.Text);
           //  S_List.print();
 
             S_List.reduction_algorithim();
             S_List.print_minimized_list();
+            S_List.write_Xml(textBox1.Text);
 
         }
     }

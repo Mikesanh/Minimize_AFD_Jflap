@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
 using System.IO;
+using System.Windows.Forms;
 
 
 namespace Minimize_AFD_V2
@@ -173,6 +174,7 @@ namespace Minimize_AFD_V2
         {
             XmlDocument doc = new XmlDocument();
             doc.Load(file);
+            
 
             foreach (XmlNode node in doc.DocumentElement)
             {
@@ -357,6 +359,8 @@ namespace Minimize_AFD_V2
 
 
         }
+
+
         public void print_minimized_list()
         {
             int i = 0;
@@ -393,6 +397,26 @@ namespace Minimize_AFD_V2
 
         }
 
+        public bool isAFD(List<State_node> Mylist)
+        {
+
+            int state1_num_transitions = 0;
+            int state2_num_transitions = 0;
+            //state 1
+
+            state1_num_transitions = Mylist[0].get_trans().Count;
+            foreach (State_node node in Mylist)
+            {
+                state2_num_transitions = node.get_trans().Count;
+
+                if (state1_num_transitions != state2_num_transitions)
+                    return false;
+
+            }
+            return true;
+        }
+
+
         public void print_mark(List<array_node> Pair_states_list)
         {
             //Print mark
@@ -406,120 +430,135 @@ namespace Minimize_AFD_V2
 
         public void reduction_algorithim()
         {
-            State_node[] vertical_states_arr = new State_node[Mylist.Count - 1];
-            State_node[] horizontal_states_arr = new State_node[Mylist.Count - 1];
-            List<array_node> Pair_states_list = new List<array_node>();
-
-            int cont = 0;
-
-            //Lenar los dos arreglos unidimensionales
-            foreach (State_node node in Mylist)
+            if (isAFD(Mylist) == false)
             {
-                if (cont == 0)
-                {
-                    horizontal_states_arr[cont] = node;
-                }
-                if (cont >= 1 && cont <= (Mylist.Count - 1))
-                {
-
-                    vertical_states_arr[cont - 1] = node;
-                }
-                if (cont >= 1 && cont != (Mylist.Count - 1))
-                {
-
-                    horizontal_states_arr[cont] = node;
-                }
-
-                cont++;
-
+                MessageBox.Show("It's not AFD, please enter an AFD");
+                return;
+                
             }
-            //Lenar la lista Pair states de onjetos state y marcar los distinguibles
-            int contador = 0;
-            for (int i = 0; i < horizontal_states_arr.Length; i++)
-            {
-                for (int j = 0; j < vertical_states_arr.Length; j++)
-                {
-                    int num = j + contador;
-                    if (num < vertical_states_arr.Length)
-                    {
-                        array_node node = new array_node();
-                        node.state1 = horizontal_states_arr[i];
-                        node.state2 = vertical_states_arr[num];
-                        if (vertical_states_arr[num].getFinal() == true && horizontal_states_arr[i].getFinal() == false ||
-                           vertical_states_arr[num].getFinal() == false && horizontal_states_arr[i].getFinal() == true)
-                        {
-                            node.son_distinguibles = true;
-                            node.son_indistinguibles = false;
-                            node.mark = 0;
-                        }
-                        else
-                        {
-                            node.son_distinguibles = false;
-                            node.son_indistinguibles = true;
-                            node.mark = -1;
-                        }
+                State_node[] vertical_states_arr = new State_node[Mylist.Count - 1];
+                State_node[] horizontal_states_arr = new State_node[Mylist.Count - 1];
+                List<array_node> Pair_states_list = new List<array_node>();
+                bool has_distinguibles = false;
+                int cont = 0;
 
-                        Pair_states_list.Add(node);
+                //Lenar los dos arreglos unidimensionales
+                foreach (State_node node in Mylist)
+                {
+                    if (cont == 0)
+                    {
+                        horizontal_states_arr[cont] = node;
                     }
+                    if (cont >= 1 && cont <= (Mylist.Count - 1))
+                    {
+
+                        vertical_states_arr[cont - 1] = node;
+                    }
+                    if (cont >= 1 && cont != (Mylist.Count - 1))
+                    {
+
+                        horizontal_states_arr[cont] = node;
+                    }
+
+                    cont++;
+
+                }
+                //Lenar la lista Pair states de onjetos state y marcar los distinguibles
+                int contador = 0;
+                for (int i = 0; i < horizontal_states_arr.Length; i++)
+                {
+                    for (int j = 0; j < vertical_states_arr.Length; j++)
+                    {
+                        int num = j + contador;
+                        if (num < vertical_states_arr.Length)
+                        {
+                            array_node node = new array_node();
+                            node.state1 = horizontal_states_arr[i];
+                            node.state2 = vertical_states_arr[num];
+                            if (vertical_states_arr[num].getFinal() == true && horizontal_states_arr[i].getFinal() == false ||
+                               vertical_states_arr[num].getFinal() == false && horizontal_states_arr[i].getFinal() == true)
+                            {
+                                node.son_distinguibles = true;
+                                node.son_indistinguibles = false;
+                                node.mark = 0;
+                                has_distinguibles = true;
+                            }
+                            else
+                            {
+                                node.son_distinguibles = false;
+                                node.son_indistinguibles = true;
+                                node.mark = -1;
+                            }
+
+                            Pair_states_list.Add(node);
+                        }
+                    }
+
+                    contador++;
+                }
+                if (has_distinguibles == false)
+                {
+                    MessageBox.Show("This AFD can't be minimized");
+                    return;
                 }
 
-                contador++;
-            }
-
-            //Algoritmo para marcar
-            int to_s1;
-            int to_s2;
-            bool parar = false;
-            while (parar != true)
-            {
-                contador = 0;
-                parar = true;
-                foreach (array_node Pair_item in Pair_states_list.ToList())
+                //Algoritmo para marcar
+                int to_s1;
+                int to_s2;
+                bool parar = false;
+                while (parar != true)
                 {
-
-                    //Si el par es indisitnguible(que tiene un espacio libre) y estam arcado con -1
-                    if (Pair_item.mark == -1)
+                    contador = 0;
+                    parar = true;
+                    foreach (array_node Pair_item in Pair_states_list.ToList())
                     {
-                        //Buscar las transiciones de el estado 1 y el estado 2
-                        for (int i = 0; i < Pair_item.state1.get_trans().Count; i++)
+
+                        //Si el par es indisitnguible(que tiene un espacio libre) y estam arcado con -1
+                        if (Pair_item.mark == -1)
                         {
-                            for (int j = 0; j < Pair_item.state2.get_trans().Count; j++)
+                            //Buscar las transiciones de el estado 1 y el estado 2
+                            for (int i = 0; i < Pair_item.state1.get_trans().Count; i++)
                             {
-
-                                //Si estan leyendo la misma variable, buscar los To
-                                if (Pair_item.state1.get_trans()[i].getRead() == Pair_item.state2.get_trans()[j].getRead())
+                                for (int j = 0; j < Pair_item.state2.get_trans().Count; j++)
                                 {
-                                    //Buscar los dos estados que dieron de reulstado en el To
-                                    foreach (array_node node in Pair_states_list)
+
+                                    //Si estan leyendo la misma variable, buscar los To
+                                    if (Pair_item.state1.get_trans()[i].getRead() == Pair_item.state2.get_trans()[j].getRead())
                                     {
-                                        //Si el nuevvo par de TO es un par de los que esta en la lista de pares 
-                                        to_s1 = Pair_item.state1.get_trans()[i].getTo();
-                                        to_s2 = Pair_item.state2.get_trans()[j].getTo();
-                                        if (to_s2 == to_s1)
+                                        //Buscar los dos estados que dieron de reulstado en el To
+                                        foreach (array_node node in Pair_states_list)
                                         {
-                                            break;
-                                        }
-
-                                        if (Pair_item.state1.get_trans()[i].getTo() == node.state1.getId() &&
-                                            Pair_item.state2.get_trans()[j].getTo() == node.state2.getId())
-                                        {
-                                            if (node.mark >= 0)
+                                            //Si el nuevvo par de TO es un par de los que esta en la lista de pares 
+                                            to_s1 = Pair_item.state1.get_trans()[i].getTo();
+                                            to_s2 = Pair_item.state2.get_trans()[j].getTo();
+                                            if (to_s2 == to_s1)
                                             {
-                                                Pair_states_list[contador].mark = node.mark + 1;
-                                                parar = false;
+                                                break;
+                                            }
+
+                                            if (Pair_item.state1.get_trans()[i].getTo() == node.state1.getId() &&
+                                                Pair_item.state2.get_trans()[j].getTo() == node.state2.getId())
+                                            {
+                                                if (node.mark >= 0)
+                                                {
+                                                    Pair_states_list[contador].mark = node.mark + 1;
+                                                    parar = false;
+
+                                                }
+                                                break;
+                                            }
+                                            else if (Pair_item.state1.get_trans()[i].getTo() == node.state2.getId() &&
+                                                 Pair_item.state2.get_trans()[j].getTo() == node.state1.getId())
+                                            {
+                                                if (node.mark >= 0)
+                                                {
+                                                    Pair_states_list[contador].mark = node.mark + 1;
+                                                    parar = false;
+                                                }
+                                                break;
 
                                             }
-                                            break;
-                                        }
-                                        else if (Pair_item.state1.get_trans()[i].getTo() == node.state2.getId() &&
-                                             Pair_item.state2.get_trans()[j].getTo() == node.state1.getId())
-                                        {
-                                            if (node.mark >= 0)
-                                            {
-                                                Pair_states_list[contador].mark = node.mark + 1;
-                                                parar = false;
-                                            }
-                                            break;
+
 
                                         }
 
@@ -529,80 +568,76 @@ namespace Minimize_AFD_V2
 
                                 }
 
-
                             }
 
                         }
 
+                        contador++;
                     }
 
-                    contador++;
                 }
 
-            }
+                //Print Mark
+                print_mark(Pair_states_list);
 
-            //Print Mark
-            print_mark(Pair_states_list);
 
-            //borrar la lista anterior
-            // Mylist.Clear();
-            //
+                //Create new states formed 
+                byte id = 0;
+                string name = "";
+                float x = 0;
+                float y = 0;
+                bool initial = false;
+                bool final = false;
+                List<State_node> temp_list = Mylist;
 
-            //Create new states formed 
-            byte id = 0;
-            string name = "";
-            float x = 0;
-            float y = 0;
-            bool initial = false;
-            bool final = false;
-            List<State_node> temp_list = Mylist;
-
-            foreach (array_node Pair_item in Pair_states_list)
-            {
-                //Si el par es equivalente
-                if (Pair_item.mark == -1)
+                foreach (array_node Pair_item in Pair_states_list)
                 {
+                initial = false;
+                final = false;
+                    //Si el par es equivalente
+                    if (Pair_item.mark == -1)
+                    {
 
-                    //Se concatena el nombre
-                    name = Pair_item.state1.getName() + "," + Pair_item.state2.getName();
-                    x = Pair_item.state1.getX();
-                    y = Pair_item.state1.getY();
-                    //Si alguno del par es inicial
-                    if (Pair_item.state1.getInit() == true || Pair_item.state1.getInit() == true)
-                    {
-                        initial = true;
-                    }
-                    //Si alguno del par es final
-                    if (Pair_item.state1.getFinal() == true || Pair_item.state1.getFinal() == true)
-                    {
-                        final = true;
-                    }
-
-                    State_node node = new State_node(id, name, x, y, initial, final);
-                    foreach (Transition tran in Pair_item.state1.get_trans())
-                    {
-                        tran.setFrom(id);
-                        if(tran.To_State_name == Pair_item.state1.getName()|| tran.To_State_name == Pair_item.state2.getName())
+                        //Se concatena el nombre
+                        name = Pair_item.state1.getName() + "," + Pair_item.state2.getName();
+                        x = Pair_item.state1.getX();
+                        y = Pair_item.state1.getY();
+                        //Si alguno del par es inicial
+                        if (Pair_item.state1.getInit() == true || Pair_item.state2.getInit() == true)
                         {
-                            tran.To_State_name = name;
+                            initial = true;
                         }
-                        node.get_trans().Add(tran);
-                    }
-
-                    //Se agrega el nuevo nodo a una lista
-                    Minimized_list.Add(node);
-                    //Borro los nodos separados que ahora estan unidos de la lista temporal
-                    foreach (State_node item in temp_list.ToList())
-                    {
-                        if (item.getName() == Pair_item.state1.getName() || item.getName() == Pair_item.state2.getName())
+                        //Si alguno del par es final
+                        if (Pair_item.state1.getFinal() == true || Pair_item.state2.getFinal() == true)
                         {
-                            temp_list.Remove(item);
+                            final = true;
                         }
-                    }
-                    int numerito =0;
-                    foreach (State_node node_in_list in temp_list.ToList())
-                    {
-                       
+
+                        State_node node = new State_node(id, name, x, y, initial, final);
+                        foreach (Transition tran in Pair_item.state1.get_trans())
+                        {
+                            tran.setFrom(id);
+                            if (tran.To_State_name == Pair_item.state1.getName() || tran.To_State_name == Pair_item.state2.getName())
+                            {
+                                tran.To_State_name = name;
+                            }
+                            node.get_trans().Add(tran);
+                        }
+
+                        //Se agrega el nuevo nodo a una lista
+                        Minimized_list.Add(node);
+                        //Borro los nodos separados que ahora estan unidos de la lista temporal
+                        foreach (State_node item in temp_list.ToList())
+                        {
+                            if (item.getName() == Pair_item.state1.getName() || item.getName() == Pair_item.state2.getName())
+                            {
+                                temp_list.Remove(item);
+                            }
+                        }
+                        int numerito = 0;
+                        foreach (State_node node_in_list in temp_list.ToList())
+                        {
+
                             for (int i = 0; i < node_in_list.get_trans().Count; i++)
                             {
                                 if (node_in_list.get_trans()[i].To_State_name == Pair_item.state1.getName())
@@ -610,62 +645,162 @@ namespace Minimize_AFD_V2
                                     //chaka
                                     temp_list[numerito].get_trans()[i].To_State_name = name;
                                 }
-                            if (node_in_list.get_trans()[i].To_State_name == Pair_item.state2.getName())
-                            {
-                                temp_list[numerito].get_trans()[i].To_State_name = name;
+                                if (node_in_list.get_trans()[i].To_State_name == Pair_item.state2.getName())
+                                {
+                                    temp_list[numerito].get_trans()[i].To_State_name = name;
+                                }
                             }
-                            }
 
-                        numerito++;
-                        
-                    }
+                            numerito++;
 
-
-                    id++;
-                }
-                else
-                {
-                    continue;
-                }
-            }
-
-            //Agregar los nodos restantes, los que estan separados
-            foreach (State_node node_from_temp_list in temp_list)
-            {
-                //Agregar nuevo id a los nodos separados
-                node_from_temp_list.setId(id);
-                id++;
-                Minimized_list.Add(node_from_temp_list);
-            }
-
-            //Agregar las transiciones a los nodos
-
-            foreach (State_node node_in_minimized_list in Minimized_list)
-            {
-                foreach (Transition node_transition in node_in_minimized_list.get_trans())
-                {
-                    //Ponerle el nuevo From a los nodos, que tiene que cambiar porque su id cambio
-                    node_transition.setFrom(node_in_minimized_list.getId());
-
-                    foreach (State_node node_searching in Minimized_list)
-                    {
-                        if (node_transition.To_State_name == node_searching.getName())
-                        {
-                            node_transition.setTo(node_searching.getId());
                         }
+
+
+                        id++;
+                    }
+                    else
+                    {
+                        continue;
+                    }
+                }
+
+                //Agregar los nodos restantes, los que estan separados
+                foreach (State_node node_from_temp_list in temp_list)
+                {
+                    //Agregar nuevo id a los nodos separados
+                    node_from_temp_list.setId(id);
+                    id++;
+                    Minimized_list.Add(node_from_temp_list);
+                }
+
+                //Agregar las transiciones a los nodos
+
+                foreach (State_node node_in_minimized_list in Minimized_list)
+                {
+                    foreach (Transition node_transition in node_in_minimized_list.get_trans())
+                    {
+                        //Ponerle el nuevo From a los nodos, que tiene que cambiar porque su id cambio
+                        node_transition.setFrom(node_in_minimized_list.getId());
+
+                        foreach (State_node node_searching in Minimized_list)
+                        {
+                            if (node_transition.To_State_name == node_searching.getName())
+                            {
+                                node_transition.setTo(node_searching.getId());
+                            }
+                        }
+
                     }
 
                 }
 
+                //Escribir nuevo archivo XML
+
+
+
+
+
+
+            
+           
+        }
+        public void write_Xml(string file_path)
+        {
+            string nam = "C:\\Users\\sanch\\Desktop\\JFF_Files\\Minimized_examples\\" + Path.GetFileName(file_path);
+            XmlWriter xmlWriter = XmlWriter.Create(nam);
+
+            xmlWriter.WriteStartDocument();
+            xmlWriter.WriteStartElement("structure");
+
+            xmlWriter.WriteStartElement("type");
+            xmlWriter.WriteString("fa");
+            xmlWriter.WriteEndElement();
+
+            xmlWriter.WriteStartElement("automaton");
+
+            string id;
+            string name;
+            string x;
+            string y;
+            string from;
+            string read;
+            string to;
+            foreach(State_node node in Minimized_list)
+            {
+                id = node.getId().ToString();
+                name = node.getName();
+                x = node.getX().ToString();
+                y = node.getX().ToString();
+
+                //start of state
+                xmlWriter.WriteStartElement("state");
+                xmlWriter.WriteAttributeString("id", id);
+                xmlWriter.WriteAttributeString("name", name);
+
+                xmlWriter.WriteStartElement("x");
+                xmlWriter.WriteString(x);
+                xmlWriter.WriteEndElement();
+
+                xmlWriter.WriteStartElement("y");
+                xmlWriter.WriteString(y);
+                xmlWriter.WriteEndElement();
+
+                if (node.getInit() == true)
+                {
+                    xmlWriter.WriteStartElement("initial");
+                    xmlWriter.WriteEndElement();
+                }
+                if (node.getFinal() == true)
+                {
+                    xmlWriter.WriteStartElement("final");
+                    xmlWriter.WriteEndElement();
+                }
+                //end of state
+                xmlWriter.WriteEndElement();
+            }
+            foreach (State_node node in Minimized_list)
+            {
+                foreach(Transition tran in node.get_trans())
+                {
+                    from = tran.getFrom().ToString();
+                    read = tran.getRead();
+                    to = tran.getTo().ToString();
+
+                    xmlWriter.WriteStartElement("transition");
+
+                    xmlWriter.WriteStartElement("from");
+                    xmlWriter.WriteString(from);
+                    xmlWriter.WriteEndElement();
+
+                    xmlWriter.WriteStartElement("to");
+                    xmlWriter.WriteString(to);
+                    xmlWriter.WriteEndElement();
+
+                    xmlWriter.WriteStartElement("read");
+                    xmlWriter.WriteString(read);
+                    xmlWriter.WriteEndElement();
+
+                    xmlWriter.WriteEndElement();
+
+                }
             }
 
 
+            xmlWriter.WriteEndElement();
+           // xmlWriter.WriteEndElement();
+            xmlWriter.WriteEndDocument();
+            xmlWriter.Close();
+            //xmlWriter.WriteStartElement("user");
+            //xmlWriter.WriteAttributeString("age", "42");
+            //xmlWriter.WriteString("John Doe");
+            //xmlWriter.WriteEndElement();
 
-
+            //xmlWriter.WriteStartElement("user");
+            //xmlWriter.WriteAttributeString("age", "39");
+            //xmlWriter.WriteString("Jane Doe");
 
 
         }
-
 
 
     }
